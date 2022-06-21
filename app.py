@@ -12,7 +12,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # app.config['JSON_SORT_KEYS'] = False
 app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 3}
 
-
 db.init_app(app)
 api = Api(app)
 movie_ns = api.namespace('movies')
@@ -21,7 +20,16 @@ movie_ns = api.namespace('movies')
 @movie_ns.route('/')
 class MoviesViews(Resource):
     def get(self):
-        all_movies = db.session.query(Movie).all()
+
+        director_id = request.args.get("director_id")
+        genre_id = request.args.get("genre_id")
+
+        if director_id:
+            movies = db.session.query(Movie).filter(Movie.director_id == director_id)
+        if genre_id:
+            movies = db.session.query(Movie).filter(Movie.genre_id == genre_id)
+
+        all_movies = movies.all()
         return movies_schema.dump(all_movies), 200
 
     def post(self):
@@ -29,21 +37,21 @@ class MoviesViews(Resource):
         new_movie = Movie(**req)
         with db.session.begin():
             db.session.add(new_movie)
-        return "", 201
+        return f"Новый фильм с id {new_movie.id} добавлен в БД", 201
 
 
-@movie_ns.route('/<int:uid>')
+@movie_ns.route('/<int:movie_id>')
 class MovieViews(Resource):
-    def get(self, uid: int):
+    def get(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get(uid)
+            movie = db.session.query(Movie).get
             return movie_schema.dump(movie), 200
         except Exception as e:
             return str(e), 404
 
-    def put(self, uid: int):
+    def put(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get(uid)
+            movie = db.session.query(Movie).get
             req_json = request.json
 
             movie.title = req_json.get('title')
@@ -58,13 +66,13 @@ class MovieViews(Resource):
 
             db.session.add(movie)
             db.session.commit()
-            return "", 204
+            return f"Фильм с id {movie.id} обновлен", 204
         except Exception as e:
             return str(e), 404
 
-    def patch(self, uid: int):
+    def patch(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get(uid)
+            movie = db.session.query(Movie).get
             req_json = request.json
 
             if 'title' in req_json:
@@ -88,16 +96,16 @@ class MovieViews(Resource):
 
             db.session.add(movie)
             db.session.commit()
-            return "", 204
+            return f"Фильм с id {movie.id} обновлен", 204
         except Exception as e:
             return str(e), 404
 
-    def delete(self, uid: int):
+    def delete(self, movie_id: int):
         try:
-            book = db.session.query(Movie).get(uid)
-            db.session.delete(book)
+            movie = db.session.query(Movie).get
+            db.session.delete(movie)
             db.session.commit()
-            return "", 204
+            return f"Фильм с id {movie.id} удален", 204
         except Exception as e:
             return str(e), 404
 
