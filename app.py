@@ -1,6 +1,6 @@
 # app
 
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_restx import Api, Resource
 
 from models import Movie, Director, Genre, db
@@ -14,6 +14,8 @@ app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 3}
 db.init_app(app)
 api = Api(app)
 movie_ns = api.namespace('movies')
+director_ns = api.namespace('directors')
+genre_ns = api.namespace('genres')
 
 
 @movie_ns.route('/')
@@ -110,6 +112,12 @@ class MovieViews(Resource):
             return f"Фильм с id {movie.id} удален", 204
         except Exception as e:
             return str(e), 404
+
+
+director_ns('/')
+class DirectorsView(Resource):
+    def get(self):
+        directors = db.session.query(Director).all()
 
 
 if __name__ == "__main__":
