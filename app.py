@@ -9,7 +9,6 @@ from schemas import movie_schema, movies_schema
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['JSON_SORT_KEYS'] = False
 app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 3}
 
 db.init_app(app)
@@ -20,16 +19,19 @@ movie_ns = api.namespace('movies')
 @movie_ns.route('/')
 class MoviesViews(Resource):
     def get(self):
+        movie_with_director_and_genre = db.session.query(Movie.id, Movie.title, Movie.description, Movie.rating,
+                                                         Movie.trailer, Genre.name.label('genre'),
+                                                         Director.name.label('director')).join(Genre).join(Director)
 
         director_id = request.args.get("director_id")
         genre_id = request.args.get("genre_id")
 
         if director_id:
-            movies = db.session.query(Movie).filter(Movie.director_id == director_id)
+            movie_with_director_and_genre = movie_with_director_and_genre.filter(Movie.director_id == director_id)
         if genre_id:
-            movies = db.session.query(Movie).filter(Movie.genre_id == genre_id)
+            movie_with_director_and_genre = movie_with_director_and_genre.filter(Movie.genre_id == genre_id)
 
-        all_movies = movies.all()
+        all_movies = movie_with_director_and_genre.all()
         return movies_schema.dump(all_movies), 200
 
     def post(self):
@@ -44,14 +46,14 @@ class MoviesViews(Resource):
 class MovieViews(Resource):
     def get(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get
+            movie = db.session.query(Movie).get(movie_id)
             return movie_schema.dump(movie), 200
         except Exception as e:
             return str(e), 404
 
     def put(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get
+            movie = db.session.query(Movie).get(movie_id)
             req_json = request.json
 
             movie.title = req_json.get('title')
@@ -72,7 +74,7 @@ class MovieViews(Resource):
 
     def patch(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get
+            movie = db.session.query(Movie).get(movie_id)
             req_json = request.json
 
             if 'title' in req_json:
@@ -102,7 +104,7 @@ class MovieViews(Resource):
 
     def delete(self, movie_id: int):
         try:
-            movie = db.session.query(Movie).get
+            movie = db.session.query(Movie).get(movie_id)
             db.session.delete(movie)
             db.session.commit()
             return f"Фильм с id {movie.id} удален", 204
