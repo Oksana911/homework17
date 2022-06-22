@@ -114,10 +114,38 @@ class MovieViews(Resource):
             return str(e), 404
 
 
-director_ns('/')
+@director_ns.route('/')
 class DirectorsView(Resource):
-    def get(self):
-        directors = db.session.query(Director).all()
+    def post(self):
+        req = request.json
+        new_dir = Director(**req)
+        with db.session.begin():
+            db.session.add(new_dir)
+        return f"Новый режиссер с id {new_dir.id} добавлен в БД", 201
+
+
+@director_ns.route('/<int:dir_id>')
+class DirectorView(Resource):
+    def put(self, dir_id: int):
+        try:
+            dir = db.session.query(Director).get(dir_id)
+            req_json = request.json
+            dir.name = req_json.get('name')
+
+            db.session.add(dir)
+            db.session.commit()
+            return f"Режиссер с id {dir.id} обновлен", 204
+        except Exception as e:
+            return str(e), 404
+
+    def delete(self, dir_id: int):
+        try:
+            dir = db.session.query(Director).get(dir_id)
+            db.session.delete(dir)
+            db.session.commit()
+            return f"Режиссер с id {dir.id} удален", 204
+        except Exception as e:
+            return str(e), 404
 
 
 if __name__ == "__main__":
